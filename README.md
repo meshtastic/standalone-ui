@@ -45,6 +45,17 @@ This repository provides firmware source code for the following MUI devices and 
 ## :computer: Build & Flash
 
 Please follow the prerequisites for setting up the <a href="https://meshtastic.org/docs/development/linux" target="_blank">Linux Development Environment</a> and the general <a href="https://meshtastic.org/docs/development/firmware/build/" target="_blank">build instructions.</a><br>
+
+For debian based systems : 
+```
+sudo apt install libgpiod-dev libyaml-cpp-dev libbluetooth-dev libusb-1.0-0-dev libi2c-dev libuv1-dev
+```
+
+For fedora based systems : 
+```
+sudo dnf install gcc-c++ pkgconfig(yaml-cpp) pkgconfig(libgpiod) pkgconfig(bluez) pkgconfig(libusb-1.0) libi2c-devel pkgconfig(libuv)
+```
+
 Then either install a <a href="https://meshtastic.org/docs/hardware/devices/linux-native-hardware/" target="_blank"> Linux native device</a> or use a esp32-s3 TFT device connected to a LoRa device via serial .<br><br>
 Finally build the MUI standalone firmware using a linux terminal as follows:
 
