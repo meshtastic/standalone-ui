@@ -20,7 +20,7 @@
 #endif
 
 // this is pulled in by the device-ui library
-const char *firmware_version = "2.7.12";
+const char *firmware_version = "2.7.16";
 
 #ifdef USE_DUMMY_SERIAL
 class DummyClient : public IClientBase
