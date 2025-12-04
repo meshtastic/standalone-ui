@@ -20,7 +20,7 @@
 #endif
 
 // this is pulled in by the device-ui library
-const char *firmware_version = "2.7.6";
+const char *firmware_version = "2.7.16";
 
 #ifdef USE_DUMMY_SERIAL
 class DummyClient : public IClientBase
@@ -31,17 +31,19 @@ class DummyClient : public IClientBase
     bool connect(void) override { return true; }
     bool disconnect(void) override { return true; }
     bool isConnected(void) override { return false; }
+    bool isStandalone(void) override { return true; }
     bool send(meshtastic_ToRadio &&to) override { return false; }
     meshtastic_FromRadio receive(void) override
     {
         meshtastic_FromRadio dummy{};
         return dummy;
     }
+    void setNotifyCallback(NotifyCallback notifyConnectionStatus) override {}
     ~DummyClient(){};
-} serial;
-#else
-IClientBase *client = nullptr;
+};
 #endif
+
+IClientBase *client = nullptr;
 
 DeviceScreen *screen = nullptr;
 
@@ -132,7 +134,11 @@ void setup()
         y = 480;
     screen = &DeviceScreen::create(DisplayDriverConfig(DisplayDriverConfig::device_t::X11, x, y));
 #else
+#ifdef USE_DUMMY_SERIAL
+    client = new DummyClient();
+#else
     client = new UARTClient();
+#endif
     screen = &DeviceScreen::create();
 #endif
 

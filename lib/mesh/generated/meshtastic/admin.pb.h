@@ -132,6 +132,8 @@ typedef struct _meshtastic_SharedContact {
     meshtastic_User user;
     /* Add this contact to the blocked / ignored list */
     bool should_ignore;
+    /* Set the IS_KEY_MANUALLY_VERIFIED bit */
+    bool manually_verified;
 } meshtastic_SharedContact;
 
 /* This message is used by a client to initiate or complete a key verification */
@@ -274,8 +276,9 @@ typedef struct _meshtastic_AdminMessage {
         /* Tell the node to factory reset config; all device state and configuration will be returned to factory defaults; BLE
          * bonds will be preserved. */
         int32_t factory_reset_config;
-        /* Tell the node to reset the nodedb. */
-        int32_t nodedb_reset;
+        /* Tell the node to reset the nodedb.
+     When true, favorites are preserved through reset. */
+        bool nodedb_reset;
     };
     /* The node generates this key and sends it with any get_x_response packets.
  The client MUST include the same key with any set_x commands. Key expires after 300 seconds.
@@ -351,7 +354,7 @@ extern "C" {
     }
 #define meshtastic_SharedContact_init_default                                                                                    \
     {                                                                                                                            \
-        0, false, meshtastic_User_init_default, 0                                                                                \
+        0, false, meshtastic_User_init_default, 0, 0                                                                             \
     }
 #define meshtastic_KeyVerificationAdmin_init_default                                                                             \
     {                                                                                                                            \
@@ -391,7 +394,7 @@ extern "C" {
     }
 #define meshtastic_SharedContact_init_zero                                                                                       \
     {                                                                                                                            \
-        0, false, meshtastic_User_init_zero, 0                                                                                   \
+        0, false, meshtastic_User_init_zero, 0, 0                                                                                \
     }
 #define meshtastic_KeyVerificationAdmin_init_zero                                                                                \
     {                                                                                                                            \
@@ -411,6 +414,7 @@ extern "C" {
 #define meshtastic_SharedContact_node_num_tag 1
 #define meshtastic_SharedContact_user_tag 2
 #define meshtastic_SharedContact_should_ignore_tag 3
+#define meshtastic_SharedContact_manually_verified_tag 4
 #define meshtastic_KeyVerificationAdmin_message_type_tag 1
 #define meshtastic_KeyVerificationAdmin_remote_nodenum_tag 2
 #define meshtastic_KeyVerificationAdmin_nonce_tag 3
@@ -531,7 +535,7 @@ extern "C" {
     X(a, STATIC, ONEOF, INT32, (payload_variant, reboot_seconds, reboot_seconds), 97)                                            \
     X(a, STATIC, ONEOF, INT32, (payload_variant, shutdown_seconds, shutdown_seconds), 98)                                        \
     X(a, STATIC, ONEOF, INT32, (payload_variant, factory_reset_config, factory_reset_config), 99)                                \
-    X(a, STATIC, ONEOF, INT32, (payload_variant, nodedb_reset, nodedb_reset), 100)                                               \
+    X(a, STATIC, ONEOF, BOOL, (payload_variant, nodedb_reset, nodedb_reset), 100)                                                \
     X(a, STATIC, SINGULAR, BYTES, session_passkey, 101)
 #define meshtastic_AdminMessage_CALLBACK NULL
 #define meshtastic_AdminMessage_DEFAULT NULL
@@ -579,7 +583,8 @@ extern "C" {
 #define meshtastic_SharedContact_FIELDLIST(X, a)                                                                                 \
     X(a, STATIC, SINGULAR, UINT32, node_num, 1)                                                                                  \
     X(a, STATIC, OPTIONAL, MESSAGE, user, 2)                                                                                     \
-    X(a, STATIC, SINGULAR, BOOL, should_ignore, 3)
+    X(a, STATIC, SINGULAR, BOOL, should_ignore, 3)                                                                               \
+    X(a, STATIC, SINGULAR, BOOL, manually_verified, 4)
 #define meshtastic_SharedContact_CALLBACK NULL
 #define meshtastic_SharedContact_DEFAULT NULL
 #define meshtastic_SharedContact_user_MSGTYPE meshtastic_User
@@ -614,7 +619,7 @@ extern const pb_msgdesc_t meshtastic_KeyVerificationAdmin_msg;
 #define meshtastic_HamParameters_size 31
 #define meshtastic_KeyVerificationAdmin_size 25
 #define meshtastic_NodeRemoteHardwarePinsResponse_size 496
-#define meshtastic_SharedContact_size 125
+#define meshtastic_SharedContact_size 127
 
 #ifdef __cplusplus
 } /* extern "C" */
