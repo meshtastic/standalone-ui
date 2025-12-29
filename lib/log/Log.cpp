@@ -7,7 +7,7 @@
 #define CL_RED "\033[22;31m"      //!< Red.
 #define CL_YELLOW "\033[01;33m"   //!< Yellow.
 #define CL_WHITE "\033[01;37m"    //!< White.
-#define CL_DARKGRAY "\033[01;30m" //!< Dark gray.
+#define CL_DARKGRAY "\033[01;97m" //!< Dark gray.
 #define NORMAL "\x1B[0m"          //!< Normal.
 
 #if defined(ARCH_ESP32)
@@ -21,12 +21,14 @@
 // #define _GNU_SOURCE
 #include <pthread.h>
 #define VA_START(LVL, ARG, FMT)                                                                                                  \
+    if (LVL > loglevel) return;                                                                                                  \
     pthread_getname_np(pthread_self(), threadname, sizeof(threadname));                                                          \
     printf("%s | %s %d [%s] ", lvl[LVL], getTime(), int(millis() / 1000), threadname);                                           \
     va_start(ARG, FMT)
 #define LOG_FWD(LVL, TAG, FMT, ARG) vprintf(FMT, ARG)
 #define LOG_CRLF(LVL, TAG) printf(NORMAL "\n")
-#define esp_log_level_set(...)
+#define esp_log_level_set(S,LVL) loglevel = LVL;
+static esp_log_level_t loglevel;
 #endif
 
 extern "C" unsigned long millis(void);

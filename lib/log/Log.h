@@ -9,7 +9,7 @@ typedef enum { ESP_LOG_NONE, ESP_LOG_ERROR, ESP_LOG_WARN, ESP_LOG_INFO, ESP_LOG_
 class Log : public ILog
 {
   public:
-    Log() : ILog(this) { setDebugLevel(ESP_LOG_VERBOSE); }
+    Log() : ILog(this) { setDebugLevel(ESP_LOG_DEBUG); }
     void setDebugLevel(esp_log_level_t lvl);
 
   protected:
