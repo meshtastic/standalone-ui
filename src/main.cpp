@@ -4,6 +4,8 @@
 #include "Log.h"
 #include "comms/EthClient.h"
 #include "comms/UARTClient.h"
+#include "comms/LinuxSerialClient.h"
+#include "comms/SerialClient.h"
 #include "graphics/DeviceScreen.h"
 
 #if defined(ARCH_PORTDUINO)
@@ -44,8 +46,84 @@ class DummyClient : public IClientBase
 #endif
 
 IClientBase *client = nullptr;
-
 DeviceScreen *screen = nullptr;
+esp_log_level_t logLevel = esp_log_level_t::ESP_LOG_DEBUG;
+
+#ifdef ARCH_PORTDUINO
+std::string ttydev;
+std::string remoteHost;
+std::string displaySize;
+
+static error_t parse_opt(int key, char *arg, struct argp_state *state)
+{
+    switch (key) {
+    case 'p':
+        ttydev = arg;
+        break;
+    case 'h':
+        remoteHost = arg;
+        break;
+    case 's':
+        displaySize = arg;
+        break;
+    case 'v':
+        logLevel = esp_log_level_t::ESP_LOG_VERBOSE;
+        break;
+    case ARGP_KEY_ARG:
+        return 0;
+    default:
+        return ARGP_ERR_UNKNOWN;
+    }
+    return 0;
+}
+
+void portduinoCustomInit(void)
+{
+    static struct argp_option options[] = {{"port", 'p', "PORT", 0, "The tty device name to connect to."},
+                                           {"host", 'h', "HOSTNAME", 0, "The remote host or IP to connect to."},
+                                           {"size", 's', "XXXxYYY", 0, "The display size (default 480x480)"},
+                                           {"verbose", 'v', 0, 0, "Set log level to full trace"},
+                                           {0}};
+    static void *childArguments;
+    static char doc[] = "Standalone MUI native build.";
+    static char args_doc[] = "...";
+    static struct argp argp = {options, parse_opt, args_doc, doc, 0, 0, 0};
+    const struct argp_child child = {&argp, OPTION_ARG_OPTIONAL, 0, 0};
+    portduinoAddArguments(child, childArguments);
+}
+
+void portduinoSetup(void)
+{
+    const char *tty = getenv("MUI_TTY");
+    const char *hostname = getenv("MUI_SERVER");
+    const char *size = getenv("MUI_SIZE");
+
+    if (!ttydev.empty())
+        client = new LinuxSerialClient(ttydev.c_str());
+    else if (tty != nullptr)
+        client = new LinuxSerialClient(tty);
+    else if (!remoteHost.empty())
+        client = new EthClient(remoteHost.c_str());
+    else if (hostname != nullptr)
+        client = new EthClient(hostname);
+    else
+        client = new EthClient();
+
+    int16_t x = 480;
+    int16_t y = 480;
+    if (!displaySize.empty())
+        sscanf(displaySize.c_str(), "%" PRId16 "x%" PRId16, &x, &y);
+    else if (size != nullptr)
+        sscanf(size, "%" PRId16 "x%" PRId16, &x, &y);
+
+    if (x < 320 || x > 800)
+        x = 480;
+    if (y < 240 || y > 800)
+        y = 480;
+
+    screen = &DeviceScreen::create(DisplayDriverConfig(DisplayDriverConfig::device_t::X11, x, y));
+}
+#endif
 
 void setup()
 {
@@ -80,7 +158,7 @@ void setup()
     while (!Serial && (millis() - timeout) < 2000)
         ;
 #endif
-    logger.setDebugLevel(ESP_LOG_DEBUG); // use ESP_LOG_VERBOSE for trace category
+    logger.setDebugLevel(logLevel);
 #else
     logger.setDebugLevel(ESP_LOG_NONE); // do not log when connected over serial0
 #endif
@@ -115,25 +193,7 @@ void setup()
         ILOG_ERROR("LittleFS mount failed!");
     }
 
-#ifdef ARCH_PORTDUINO
-    const char *hostname = getenv("MUI_SERVER");
-    if (hostname == nullptr) {
-        client = new EthClient();
-    } else {
-        client = new EthClient(hostname);
-    }
-    int16_t x = 480;
-    int16_t y = 480;
-    const char *size = getenv("MUI_SIZE");
-    if (size != nullptr) {
-        sscanf(size, "%" PRId16 "x%" PRId16, &x, &y);
-    }
-    if (x < 320 || x > 800)
-        x = 480;
-    if (y < 240 || y > 800)
-        y = 480;
-    screen = &DeviceScreen::create(DisplayDriverConfig(DisplayDriverConfig::device_t::X11, x, y));
-#else
+#ifdef ARCH_ESP32
 #ifdef USE_DUMMY_SERIAL
     client = new DummyClient();
 #else
