@@ -36,7 +36,7 @@ This repository provides firmware source code for the following MUI devices and 
 - LilyGo T-HMI 2.8inch TFT (esp32-s3) - serial
 - ESP32-4848S040 4.0inch TFT (esp32-s3) - serial
 - WT32-SC01 Plus 3.5inch TFT (esp32-s3) - serial
-- Native linux X11 local/remote application - ethernet TCP/IP
+- Native linux X11 local/remote application - ethernet TCP/IP or USB serial
 
 <img src="docs/T-HMI.jpg" alt="T-HMI" width="130" height="150"><img src="docs/ESP32-4848S040.jpg" alt="ESP32-4848S040" width="150" height="150"><img src="docs/WT32-SC01-Plus.jpg" alt="WT32-SC01 Plus" width="150" height="150"><img src="docs/native-mui.png" alt="Native MUI Client" width="190" height="150">
 
@@ -77,6 +77,9 @@ cp .pio/build/native-mui/program $HOME/.local/bin/native-mui
 
 # run MUI native from CLI to connect to meshtasticd daemon
 .pio/build/native-mui/program
+
+# run MUI native from CLI to connect to LoRa device via USB
+.pio/build/native-mui/program -p /dev/ttyACM0
 ```
 
 ## Stats
