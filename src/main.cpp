@@ -3,9 +3,9 @@
 #include "Arduino.h"
 #include "Log.h"
 #include "comms/EthClient.h"
-#include "comms/UARTClient.h"
 #include "comms/LinuxSerialClient.h"
 #include "comms/SerialClient.h"
+#include "comms/UARTClient.h"
 #include "graphics/DeviceScreen.h"
 
 #if defined(ARCH_PORTDUINO)
@@ -121,7 +121,11 @@ void portduinoSetup(void)
     if (y < 240 || y > 800)
         y = 480;
 
+#ifdef USE_FRAMEBUFFER
+    screen = &DeviceScreen::create(DisplayDriverConfig(DisplayDriverConfig::device_t::FB, x, y));
+#else
     screen = &DeviceScreen::create(DisplayDriverConfig(DisplayDriverConfig::device_t::X11, x, y));
+#endif
 }
 #endif
 
