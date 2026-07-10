@@ -3,10 +3,10 @@
 #include "meshtastic/mesh.pb.h"
 #include <unity.h>
 
-uint8_t buffer[512];
-char* buf = (char*)buffer;
-size_t size;
-size_t payload;
+static uint8_t buffer[512];
+static char *buf = reinterpret_cast<char *>(buffer);
+static size_t size;
+static size_t payload;
 
 
 void tearDown(void) {
