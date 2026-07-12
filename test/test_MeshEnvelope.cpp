@@ -1,10 +1,12 @@
 #include "comms/MeshEnvelope.h"
+#include "meshtastic/config.pb.h"
+#include "meshtastic/mesh.pb.h"
 #include <unity.h>
 
-uint8_t buffer[512];
-char* buf = (char*)buffer;
-size_t size;
-size_t payload;
+static uint8_t buffer[512];
+static char *buf = reinterpret_cast<char *>(buffer);
+static size_t size;
+static size_t payload;
 
 
 void tearDown(void) {
@@ -81,6 +83,19 @@ void test_MeshEnvelope_validate_packet_with_skip_bytes(void) {
     TEST_ASSERT_EQUAL(0x05, buffer[3]);
 }
 
+void test_packet_authenticity_schema_contract(void) {
+    meshtastic_Config_SecurityConfig security = meshtastic_Config_SecurityConfig_init_default;
+    meshtastic_DeviceMetadata metadata = meshtastic_DeviceMetadata_init_zero;
+
+    TEST_ASSERT_EQUAL(9, meshtastic_Config_SecurityConfig_packet_signature_policy_tag);
+    TEST_ASSERT_EQUAL(14, meshtastic_DeviceMetadata_has_xeddsa_tag);
+    TEST_ASSERT_EQUAL(meshtastic_Config_SecurityConfig_PacketSignaturePolicy_PACKET_SIGNATURE_POLICY_BALANCED,
+                      security.packet_signature_policy);
+    TEST_ASSERT_FALSE(metadata.has_xeddsa);
+    TEST_ASSERT_EQUAL(1, meshtastic_Config_SecurityConfig_PacketSignaturePolicy_PACKET_SIGNATURE_POLICY_COMPATIBLE);
+    TEST_ASSERT_EQUAL(2, meshtastic_Config_SecurityConfig_PacketSignaturePolicy_PACKET_SIGNATURE_POLICY_STRICT);
+}
+
 
 void RUN_UNITY_TESTS() {
     UNITY_BEGIN();
@@ -94,6 +109,7 @@ void RUN_UNITY_TESTS() {
     RUN_TEST(test_MeshEnvelope_validate_partial_packet);
     RUN_TEST(test_MeshEnvelope_validate_skip_bytes);
     RUN_TEST(test_MeshEnvelope_validate_packet_with_skip_bytes);
+    RUN_TEST(test_packet_authenticity_schema_contract);
     UNITY_END();
 }
 
