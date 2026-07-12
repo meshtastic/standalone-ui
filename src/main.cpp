@@ -7,6 +7,8 @@
 #include "comms/SerialClient.h"
 #include "comms/UARTClient.h"
 #include "graphics/DeviceScreen.h"
+#include <cstdlib>
+#include <utility>
 
 #if defined(ARCH_PORTDUINO)
 #include <thread>
@@ -96,16 +98,26 @@ void portduinoSetup(void)
 {
     const char *tty = getenv("MUI_TTY");
     const char *hostname = getenv("MUI_SERVER");
+    const char *portValue = getenv("MUI_PORT");
     const char *size = getenv("MUI_SIZE");
+
+    uint16_t remotePort = SERVER_PORT;
+    if (portValue != nullptr && *portValue != '\0') {
+        char *end = nullptr;
+        const unsigned long parsedPort = std::strtoul(portValue, &end, 10);
+        if (end != portValue && *end == '\0' && parsedPort <= 65535) {
+            remotePort = static_cast<uint16_t>(parsedPort);
+        }
+    }
 
     if (!ttydev.empty())
         client = new LinuxSerialClient(ttydev.c_str());
     else if (tty != nullptr)
         client = new LinuxSerialClient(tty);
     else if (!remoteHost.empty())
-        client = new EthClient(remoteHost.c_str());
+        client = new EthClient(remoteHost.c_str(), remotePort);
     else if (hostname != nullptr)
-        client = new EthClient(hostname);
+        client = new EthClient(hostname, remotePort);
     else
         client = new EthClient();
 
@@ -124,7 +136,18 @@ void portduinoSetup(void)
 #ifdef USE_FRAMEBUFFER
     screen = &DeviceScreen::create(DisplayDriverConfig(DisplayDriverConfig::device_t::FB, x, y));
 #else
-    screen = &DeviceScreen::create(DisplayDriverConfig(DisplayDriverConfig::device_t::X11, x, y));
+    DisplayDriverConfig displayConfig(DisplayDriverConfig::device_t::X11, x, y);
+    // Native Linux builds normally have no physical input devices attached.
+    // Allow tests (and headless CI) to provide the event devices explicitly,
+    // while preserving the previous no-input behavior when unset.
+    DisplayDriverConfig::input_config_t inputConfig;
+    if (const char *keyboard = getenv("MUI_KEYBOARD_DEVICE"))
+        inputConfig.keyboardDevice = keyboard;
+    if (const char *pointer = getenv("MUI_POINTER_DEVICE"))
+        inputConfig.pointerDevice = pointer;
+    if (!inputConfig.keyboardDevice.empty() || !inputConfig.pointerDevice.empty())
+        displayConfig.input(std::move(inputConfig));
+    screen = &DeviceScreen::create(std::move(displayConfig));
 #endif
 }
 #endif
