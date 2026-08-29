@@ -22,7 +22,7 @@
 #endif
 
 // this is pulled in by the device-ui library
-const char *firmware_version = "2.7.20";
+const char *firmware_version = "2.8.0";
 
 #ifdef USE_DUMMY_SERIAL
 class DummyClient : public IClientBase
@@ -254,7 +254,6 @@ void tft_task_handler(void *)
     ILOG_INFO("tft_task_handler started");
     while (true) {
         screen->task_handler();
-        screen->sleep(5);
     }
 }
 #else
