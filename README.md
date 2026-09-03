@@ -33,6 +33,7 @@ This repository provides firmware source code for the following MUI devices and 
 
 <p style="text-align:center;">
 
+- RockBase NM-CYD-C5 TFT (esp32-c5) - serial
 - LilyGo T-HMI 2.8inch TFT (esp32-s3) - serial
 - ESP32-4848S040 4.0inch TFT (esp32-s3) - serial
 - Makerfabs 4.0inch MaTouch TFT (esp32-s3) - serial
