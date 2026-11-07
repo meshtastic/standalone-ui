@@ -100,6 +100,15 @@ def tag_sdkconfig_state(env, enable):
     config.set(section, "custom_sdkconfig", current.rstrip("\n") + "\n" + marker)
 
 
+# PlatformIO loads the pre: script before it short-circuits a clean run
+# (builder/main.py: SConscript(pre) -> if IsCleanTarget(): CleanProject(); Exit),
+# so this script is evaluated for `pio run -t clean` too. There is no build to
+# protect there, and patching the shared framework-espidf header (or writing the
+# sdkconfig marker) would leave the package mutated with no post: pass to undo it.
+# env.GetOption("clean") is the same check PlatformIO's IsCleanTarget() uses.
+if env.GetOption("clean"):
+    Return()
+
 phase = "post" if env.get("MESHTASTIC_EXFAT_PATCHED") else "pre"
 enable = wants_exfat(env)
 
