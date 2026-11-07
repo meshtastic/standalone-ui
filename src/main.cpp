@@ -21,8 +21,15 @@
 #include "Wire.h"
 #endif
 
+// device-ui's SpiBus reads the SD card through this HSPI instance when the board
+// wires the card to SPI1 (SDCARD_USE_SPI1). Defined here, mirroring firmware FSCommon.cpp.
+#if defined(ARCH_ESP32) && defined(HAS_SDCARD) && defined(SDCARD_USE_SPI1)
+#include <SPI.h>
+SPIClass SPI_HSPI(HSPI);
+#endif
+
 // this is pulled in by the device-ui library
-const char *firmware_version = "2.8.0";
+const char *firmware_version = "2.8.3";
 
 #ifdef USE_DUMMY_SERIAL
 class DummyClient : public IClientBase
