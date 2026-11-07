@@ -215,6 +215,14 @@ void setup()
 
     screen->init(client);
 
+#if defined(ARCH_ESP32) && defined(HAS_SDCARD) && defined(SDCARD_USE_SPI1) && defined(SPI_SCK) && defined(SPI_MISO) &&           \
+    defined(SPI_MOSI)
+    // The WT32-SC01 Plus declares SPI_SCK/MISO/MOSI as static const constants rather than
+    // macros, so device-ui's macro-guarded SDHandler.begin() never runs and SD.begin() falls
+    // back to unattached ESP32-S3 HSPI defaults. Attach the card pins here instead.
+    SPI_HSPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI);
+#endif
+
 #ifdef ARDUINO_ARCH_ESP32
     ILOG_DEBUG("Free heap : %8d bytes", ESP.getFreeHeap());
     ILOG_DEBUG("PSRAM     : %8d bytes", ESP.getFreePsram());
