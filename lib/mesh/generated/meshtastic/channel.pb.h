@@ -97,6 +97,14 @@ typedef struct _meshtastic_ChannelSettings {
     /* Per-channel module settings. */
     bool has_module_settings;
     meshtastic_ModuleSettings module_settings;
+    /* Enable authenticated encryption (AES-CCM) for this channel.
+ When true, messages include a 12-byte authentication tag that prevents
+ forgery and bit-flipping attacks. All nodes on the channel must have
+ this enabled - unauthenticated (AES-CTR) packets are rejected.
+ Overrides SecurityConfig.packet_signature_policy for this channel: its packets are never XEdDSA signed,
+ and are not dropped for lacking a signature, because the tag authenticates them.
+ Experimental. Default: false (standard AES-CTR encryption). */
+    bool use_aead;
 } meshtastic_ChannelSettings;
 
 /* A pair of a channel number, mode and the (sharable) settings for that channel */
@@ -126,7 +134,7 @@ extern "C" {
 /* Initializer values for message structs */
 #define meshtastic_ChannelSettings_init_default                                                                                  \
     {                                                                                                                            \
-        0, {0, {0}}, "", 0, 0, 0, false, meshtastic_ModuleSettings_init_default                                                  \
+        0, {0, {0}}, "", 0, 0, 0, false, meshtastic_ModuleSettings_init_default, 0                                               \
     }
 #define meshtastic_ModuleSettings_init_default                                                                                   \
     {                                                                                                                            \
@@ -138,7 +146,7 @@ extern "C" {
     }
 #define meshtastic_ChannelSettings_init_zero                                                                                     \
     {                                                                                                                            \
-        0, {0, {0}}, "", 0, 0, 0, false, meshtastic_ModuleSettings_init_zero                                                     \
+        0, {0, {0}}, "", 0, 0, 0, false, meshtastic_ModuleSettings_init_zero, 0                                                  \
     }
 #define meshtastic_ModuleSettings_init_zero                                                                                      \
     {                                                                                                                            \
@@ -159,6 +167,7 @@ extern "C" {
 #define meshtastic_ChannelSettings_uplink_enabled_tag 5
 #define meshtastic_ChannelSettings_downlink_enabled_tag 6
 #define meshtastic_ChannelSettings_module_settings_tag 7
+#define meshtastic_ChannelSettings_use_aead_tag 8
 #define meshtastic_Channel_index_tag 1
 #define meshtastic_Channel_settings_tag 2
 #define meshtastic_Channel_role_tag 3
@@ -171,7 +180,8 @@ extern "C" {
     X(a, STATIC, SINGULAR, FIXED32, id, 4)                                                                                       \
     X(a, STATIC, SINGULAR, BOOL, uplink_enabled, 5)                                                                              \
     X(a, STATIC, SINGULAR, BOOL, downlink_enabled, 6)                                                                            \
-    X(a, STATIC, OPTIONAL, MESSAGE, module_settings, 7)
+    X(a, STATIC, OPTIONAL, MESSAGE, module_settings, 7)                                                                          \
+    X(a, STATIC, SINGULAR, BOOL, use_aead, 8)
 #define meshtastic_ChannelSettings_CALLBACK NULL
 #define meshtastic_ChannelSettings_DEFAULT NULL
 #define meshtastic_ChannelSettings_module_settings_MSGTYPE meshtastic_ModuleSettings
@@ -201,8 +211,8 @@ extern const pb_msgdesc_t meshtastic_Channel_msg;
 
 /* Maximum encoded size of messages (where known) */
 #define MESHTASTIC_MESHTASTIC_CHANNEL_PB_H_MAX_SIZE meshtastic_Channel_size
-#define meshtastic_ChannelSettings_size 72
-#define meshtastic_Channel_size 87
+#define meshtastic_ChannelSettings_size 74
+#define meshtastic_Channel_size 89
 #define meshtastic_ModuleSettings_size 8
 
 #ifdef __cplusplus

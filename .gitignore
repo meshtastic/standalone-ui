@@ -6,3 +6,6 @@
 .vscode/ipch
 squareline
 .vscode/extensions.json
+managed_components
+.dummy
+sdkconfig.*

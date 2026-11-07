@@ -21,8 +21,15 @@
 #include "Wire.h"
 #endif
 
+// device-ui's SpiBus reads the SD card through this HSPI instance when the board
+// wires the card to SPI1 (SDCARD_USE_SPI1). Defined here, mirroring firmware FSCommon.cpp.
+#if defined(ARCH_ESP32) && defined(HAS_SDCARD) && defined(SDCARD_USE_SPI1)
+#include <SPI.h>
+SPIClass SPI_HSPI(HSPI);
+#endif
+
 // this is pulled in by the device-ui library
-const char *firmware_version = "2.8.0";
+const char *firmware_version = "2.8.3";
 
 #ifdef USE_DUMMY_SERIAL
 class DummyClient : public IClientBase
@@ -207,6 +214,14 @@ void setup()
 #endif
 
     screen->init(client);
+
+#if defined(ARCH_ESP32) && defined(HAS_SDCARD) && defined(SDCARD_USE_SPI1) && defined(SPI_SCK) && defined(SPI_MISO) &&           \
+    defined(SPI_MOSI)
+    // The WT32-SC01 Plus declares SPI_SCK/MISO/MOSI as static const constants rather than
+    // macros, so device-ui's macro-guarded SDHandler.begin() never runs and SD.begin() falls
+    // back to unattached ESP32-S3 HSPI defaults. Attach the card pins here instead.
+    SPI_HSPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI);
+#endif
 
 #ifdef ARDUINO_ARCH_ESP32
     ILOG_DEBUG("Free heap : %8d bytes", ESP.getFreeHeap());

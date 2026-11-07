@@ -108,6 +108,8 @@ typedef struct _meshtastic_StoreAndForward {
         /* Text from history message. */
         meshtastic_StoreAndForward_text_t text;
     } variant;
+    /* Contains the original ID of the contained message. */
+    uint32_t original_id;
 } meshtastic_StoreAndForward;
 
 #ifdef __cplusplus
@@ -125,10 +127,7 @@ extern "C" {
 /* Initializer values for message structs */
 #define meshtastic_StoreAndForward_init_default                                                                                  \
     {                                                                                                                            \
-        _meshtastic_StoreAndForward_RequestResponse_MIN, 0,                                                                      \
-        {                                                                                                                        \
-            meshtastic_StoreAndForward_Statistics_init_default                                                                   \
-        }                                                                                                                        \
+        _meshtastic_StoreAndForward_RequestResponse_MIN, 0, {meshtastic_StoreAndForward_Statistics_init_default}, 0              \
     }
 #define meshtastic_StoreAndForward_Statistics_init_default                                                                       \
     {                                                                                                                            \
@@ -144,10 +143,7 @@ extern "C" {
     }
 #define meshtastic_StoreAndForward_init_zero                                                                                     \
     {                                                                                                                            \
-        _meshtastic_StoreAndForward_RequestResponse_MIN, 0,                                                                      \
-        {                                                                                                                        \
-            meshtastic_StoreAndForward_Statistics_init_zero                                                                      \
-        }                                                                                                                        \
+        _meshtastic_StoreAndForward_RequestResponse_MIN, 0, {meshtastic_StoreAndForward_Statistics_init_zero}, 0                 \
     }
 #define meshtastic_StoreAndForward_Statistics_init_zero                                                                          \
     {                                                                                                                            \
@@ -182,6 +178,7 @@ extern "C" {
 #define meshtastic_StoreAndForward_history_tag 3
 #define meshtastic_StoreAndForward_heartbeat_tag 4
 #define meshtastic_StoreAndForward_text_tag 5
+#define meshtastic_StoreAndForward_original_id_tag 6
 
 /* Struct field encoding specification for nanopb */
 #define meshtastic_StoreAndForward_FIELDLIST(X, a)                                                                               \
@@ -189,7 +186,8 @@ extern "C" {
     X(a, STATIC, ONEOF, MESSAGE, (variant, stats, variant.stats), 2)                                                             \
     X(a, STATIC, ONEOF, MESSAGE, (variant, history, variant.history), 3)                                                         \
     X(a, STATIC, ONEOF, MESSAGE, (variant, heartbeat, variant.heartbeat), 4)                                                     \
-    X(a, STATIC, ONEOF, BYTES, (variant, text, variant.text), 5)
+    X(a, STATIC, ONEOF, BYTES, (variant, text, variant.text), 5)                                                                 \
+    X(a, STATIC, SINGULAR, UINT32, original_id, 6)
 #define meshtastic_StoreAndForward_CALLBACK NULL
 #define meshtastic_StoreAndForward_DEFAULT NULL
 #define meshtastic_StoreAndForward_variant_stats_MSGTYPE meshtastic_StoreAndForward_Statistics
@@ -238,7 +236,7 @@ extern const pb_msgdesc_t meshtastic_StoreAndForward_Heartbeat_msg;
 #define meshtastic_StoreAndForward_Heartbeat_size 12
 #define meshtastic_StoreAndForward_History_size 18
 #define meshtastic_StoreAndForward_Statistics_size 50
-#define meshtastic_StoreAndForward_size 238
+#define meshtastic_StoreAndForward_size 244
 
 #ifdef __cplusplus
 } /* extern "C" */
