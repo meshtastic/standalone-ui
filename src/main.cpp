@@ -9,7 +9,9 @@
 #include "graphics/DeviceScreen.h"
 
 #if defined(ARCH_PORTDUINO)
+#include "NativeOptions.h"
 #include <thread>
+#include <utility>
 #define FSBegin() true
 #else
 #include "LittleFS.h"
@@ -48,7 +50,7 @@ class DummyClient : public IClientBase
         return dummy;
     }
     void setNotifyCallback(NotifyCallback notifyConnectionStatus) override {}
-    ~DummyClient(){};
+    ~DummyClient() {};
 };
 #endif
 
@@ -59,7 +61,9 @@ esp_log_level_t logLevel = esp_log_level_t::ESP_LOG_DEBUG;
 #ifdef ARCH_PORTDUINO
 std::string ttydev;
 std::string remoteHost;
-std::string displaySize;
+native_ui::OptionValues displayOptions;
+
+enum { OPT_KEYBOARD = 1000, OPT_POINTER, OPT_KEYBOARD_NAVIGATION, OPT_CURSOR, OPT_SIDEBAR_SCROLLBAR };
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
@@ -71,7 +75,22 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
         remoteHost = arg;
         break;
     case 's':
-        displaySize = arg;
+        displayOptions.size = arg;
+        break;
+    case OPT_KEYBOARD:
+        displayOptions.keyboard = arg;
+        break;
+    case OPT_POINTER:
+        displayOptions.pointer = arg;
+        break;
+    case OPT_KEYBOARD_NAVIGATION:
+        displayOptions.keyboardNavigation = arg;
+        break;
+    case OPT_CURSOR:
+        displayOptions.cursor = arg;
+        break;
+    case OPT_SIDEBAR_SCROLLBAR:
+        displayOptions.sidebarScrollbar = arg;
         break;
     case 'v':
         logLevel = esp_log_level_t::ESP_LOG_VERBOSE;
@@ -86,11 +105,18 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 
 void portduinoCustomInit(void)
 {
-    static struct argp_option options[] = {{"port", 'p', "PORT", 0, "The tty device name to connect to."},
-                                           {"host", 'h', "HOSTNAME", 0, "The remote host or IP to connect to."},
-                                           {"size", 's', "XXXxYYY", 0, "The display size (default 480x480)"},
-                                           {"verbose", 'v', 0, 0, "Set log level to full trace"},
-                                           {0}};
+    static struct argp_option options[] = {
+        {"port", 'p', "PORT", 0, "The tty device name to connect to."},
+        {"host", 'h', "HOSTNAME", 0, "The remote host or IP to connect to."},
+        {"size", 's', "WIDTHxHEIGHT", 0, "The display size (default 480x480)"},
+        {"keyboard", OPT_KEYBOARD, "DEVICE", 0, "The Linux keyboard input device"},
+        {"pointer", OPT_POINTER, "DEVICE", 0, "The Linux pointer input device"},
+        {"keyboard-navigation", OPT_KEYBOARD_NAVIGATION, "MODE", 0,
+         "Configured Linux keyboard navigation: contextual or raw (default contextual)"},
+        {"cursor", OPT_CURSOR, "MODE", 0, "Framebuffer/configured pointer cursor: auto, always, or never (default auto)"},
+        {"sidebar-scrollbar", OPT_SIDEBAR_SCROLLBAR, "MODE", 0, "Sidebar scrollbar: auto, on, or off (default auto)"},
+        {"verbose", 'v', 0, 0, "Set log level to full trace"},
+        {0}};
     static void *childArguments;
     static char doc[] = "Standalone MUI native build.";
     static char args_doc[] = "...";
@@ -103,7 +129,6 @@ void portduinoSetup(void)
 {
     const char *tty = getenv("MUI_TTY");
     const char *hostname = getenv("MUI_SERVER");
-    const char *size = getenv("MUI_SIZE");
 
     if (!ttydev.empty())
         client = new LinuxSerialClient(ttydev.c_str());
@@ -116,23 +141,36 @@ void portduinoSetup(void)
     else
         client = new EthClient();
 
-    int16_t x = 480;
-    int16_t y = 480;
-    if (!displaySize.empty())
-        sscanf(displaySize.c_str(), "%" PRId16 "x%" PRId16, &x, &y);
-    else if (size != nullptr)
-        sscanf(size, "%" PRId16 "x%" PRId16, &x, &y);
-
-    if (x < 320 || x > 800)
-        x = 480;
-    if (y < 240 || y > 800)
-        y = 480;
-
 #ifdef USE_FRAMEBUFFER
-    screen = &DeviceScreen::create(DisplayDriverConfig(DisplayDriverConfig::device_t::FB, x, y));
+    constexpr bool framebuffer = true;
+    constexpr auto device = DisplayDriverConfig::device_t::FB;
 #else
-    screen = &DeviceScreen::create(DisplayDriverConfig(DisplayDriverConfig::device_t::X11, x, y));
+    constexpr bool framebuffer = false;
+    constexpr auto device = DisplayDriverConfig::device_t::X11;
 #endif
+
+    native_ui::OptionValues environment;
+    const auto readEnvironment = [](const char *name) -> std::optional<std::string> {
+        const char *value = getenv(name);
+        return value && *value ? std::optional<std::string>(value) : std::nullopt;
+    };
+    environment.size = readEnvironment("MUI_SIZE");
+    environment.keyboard = readEnvironment("MUI_KEYBOARD");
+    environment.pointer = readEnvironment("MUI_POINTER");
+    environment.keyboardNavigation = readEnvironment("MUI_KEYBOARD_NAVIGATION");
+    environment.cursor = readEnvironment("MUI_CURSOR");
+    environment.sidebarScrollbar = readEnvironment("MUI_SIDEBAR_SCROLLBAR");
+    native_ui::DisplayOptions options;
+    std::string error;
+    if (!native_ui::resolveDisplayOptions(displayOptions, environment, framebuffer, options, error)) {
+        fprintf(stderr, "Invalid native display option: %s\n", error.c_str());
+        exit(EXIT_FAILURE);
+    }
+
+    DisplayDriverConfig config(device, options.width, options.height);
+    config.input(std::move(options.input));
+    config.navigation(std::move(options.navigation));
+    screen = &DeviceScreen::create(std::move(config));
 }
 #endif
 
