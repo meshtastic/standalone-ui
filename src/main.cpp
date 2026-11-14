@@ -28,8 +28,13 @@
 SPIClass SPI_HSPI(HSPI);
 #endif
 
+// APP_VERSION is set from version.properties by bin/platformio-custom.py
+#ifndef APP_VERSION
+#define APP_VERSION "unknown"
+#endif
+
 // this is pulled in by the device-ui library
-const char *firmware_version = "2.8.3";
+const char *firmware_version = APP_VERSION;
 
 #ifdef USE_DUMMY_SERIAL
 class DummyClient : public IClientBase

@@ -1,0 +1,50 @@
+Source: meshtastic-mui
+Section: misc
+Priority: optional
+Maintainer: Austin Lane <vidplace7@gmail.com>
+Build-Depends: debhelper-compat (= 13),
+               lsb-release,
+               tar,
+               platformio,
+               python3,
+               g++ (>= 4:10),
+               pkg-config,
+               libcurl4-gnutls-dev,
+               libgpiod-dev,
+               libi2c-dev,
+               libuv1-dev,
+               libx11-dev,
+               libinput-dev,
+               libxkbcommon-dev
+Standards-Version: 4.6.2
+Homepage: https://github.com/meshtastic/standalone-ui
+Rules-Requires-Root: no
+
+Package: meshtastic-mui
+Architecture: any
+Depends: ${misc:Depends},
+         ${shlibs:Depends}
+Suggests: meshtasticd
+Description: Meshtastic UI (MUI) client for X11
+ Meshtastic is an off-grid text communication platform that uses inexpensive
+ LoRa radios.
+ .
+ MUI is a standalone graphical client that connects to a Meshtastic node
+ over TCP/IP (e.g. a local or remote meshtasticd) or a USB serial port.
+ .
+ This package contains the X11 build.
+
+Package: meshtastic-mui-fb
+Architecture: any
+Depends: ${misc:Depends},
+         ${shlibs:Depends}
+Suggests: meshtasticd
+Description: Meshtastic UI (MUI) client for the Linux framebuffer
+ Meshtastic is an off-grid text communication platform that uses inexpensive
+ LoRa radios.
+ .
+ MUI is a standalone graphical client that connects to a Meshtastic node
+ over TCP/IP (e.g. a local or remote meshtasticd) or a USB serial port.
+ .
+ This package contains the framebuffer/evdev build, which renders directly
+ to /dev/fb* without an X server.

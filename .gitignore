@@ -9,3 +9,8 @@ squareline
 managed_components
 .dummy
 sdkconfig.*
+__pycache__
+
+# debian packaging (debian/ci_pack_sdeb.sh)
+pio
+pio.tar

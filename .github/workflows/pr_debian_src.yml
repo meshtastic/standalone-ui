@@ -1,0 +1,22 @@
+name: Debian Source Package (PR check)
+
+on:
+  pull_request:
+    paths:
+      - debian/**
+      - bin/buildinfo.py
+      - bin/readprops.py
+      - platformio.ini
+      - version.properties
+      - .github/workflows/pr_debian_src.yml
+      - .github/workflows/build_debian_src.yml
+
+permissions:
+  contents: read
+
+jobs:
+  build-debian-src:
+    uses: ./.github/workflows/build_debian_src.yml
+    with:
+      series: UNRELEASED
+      build_location: local

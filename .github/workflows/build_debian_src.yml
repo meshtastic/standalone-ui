@@ -1,0 +1,99 @@
+name: Build Debian Source Package
+
+on:
+  workflow_call:
+    secrets:
+      PPA_GPG_PRIVATE_KEY:
+        required: false
+    inputs:
+      series:
+        description: Ubuntu/Debian series to target
+        required: true
+        type: string
+      build_location:
+        description: Location where build will execute
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build-debian-src:
+    runs-on: ubuntu-26.04
+    # Only pushes/schedules on the default branch populate the cache; PR runs
+    # restore it but never save, so they don't fill up the repo's Actions cache storage.
+    env:
+      SAVE_CACHE: ${{ github.event_name != 'pull_request' && github.ref_name == github.event.repository.default_branch }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+          path: standalone-ui
+
+      - name: Install deps
+        shell: bash
+        working-directory: standalone-ui
+        run: |
+          # Build-tools (notably platformio) come from the Meshtastic project
+          # on the OpenSUSE Build Service:
+          # https://build.opensuse.org/project/show/network:Meshtastic:build-tools
+          echo 'deb http://download.opensuse.org/repositories/network:/Meshtastic:/build-tools/xUbuntu_26.04/ /' \
+            | sudo tee /etc/apt/sources.list.d/network:Meshtastic:build-tools.list
+          curl -fsSL https://download.opensuse.org/repositories/network:Meshtastic:build-tools/xUbuntu_26.04/Release.key \
+            | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/network_Meshtastic_build-tools.gpg >/dev/null
+          sudo apt-get update -y --fix-missing
+          sudo apt-get install -y build-essential devscripts equivs jq
+          sudo mk-build-deps --install --remove --tool='apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends --yes' debian/control
+
+      - name: Import GPG key
+        if: github.event_name != 'pull_request' && github.event_name != 'pull_request_target'
+        uses: crazy-max/ghaction-import-gpg@v7
+        with:
+          gpg_private_key: ${{ secrets.PPA_GPG_PRIVATE_KEY }}
+        id: gpg
+
+      - name: Get release version string
+        working-directory: standalone-ui
+        run: |
+          echo "deb=$(./bin/buildinfo.py deb)" >> $GITHUB_OUTPUT
+        env:
+          BUILD_LOCATION: ${{ inputs.build_location }}
+        id: version
+
+      - name: Restore PlatformIO cache
+        id: pio-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: standalone-ui/pio/core/.cache
+          key: |
+            pio-deb-src-${{ hashFiles('standalone-ui/platformio.ini') }}
+
+      - name: Fetch libdeps, package debian source
+        working-directory: standalone-ui
+        run: debian/ci_pack_sdeb.sh
+        env:
+          SERIES: ${{ inputs.series }}
+          GPG_KEY_ID: ${{ steps.gpg.outputs.keyid || '' }}
+          PKG_VERSION: ${{ steps.version.outputs.deb }}
+
+      - name: Extract cache from pio.tar
+        if: env.SAVE_CACHE == 'true' && steps.pio-cache.outputs.cache-hit != 'true'
+        run: tar -C standalone-ui -xf standalone-ui/pio.tar pio/core/.cache
+
+      - name: Save PlatformIO cache
+        if: env.SAVE_CACHE == 'true' && steps.pio-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: standalone-ui/pio/core/.cache
+          key: |
+            pio-deb-src-${{ hashFiles('standalone-ui/platformio.ini') }}
+
+      - name: Store binaries as an artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: meshtastic-mui-debian-${{ steps.version.outputs.deb }}~${{ inputs.series }}-src
+          overwrite: true
+          path: |
+            meshtastic-mui_${{ steps.version.outputs.deb }}*

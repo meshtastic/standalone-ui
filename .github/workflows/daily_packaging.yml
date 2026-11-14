@@ -1,0 +1,82 @@
+name: Daily Packaging
+on:
+  schedule:
+    - cron: 0 2 * * *
+  workflow_dispatch:
+  push:
+    branches:
+      - master # Default branch, same as 'cron' above
+    paths:
+      - debian/**
+      - .github/workflows/daily_packaging.yml
+      - .github/workflows/build_debian_src.yml
+      - .github/workflows/package_ppa.yml
+      - .github/workflows/package_obs.yml
+
+permissions:
+  contents: read
+
+jobs:
+  # Rolling release: scheduled runs only publish when the default branch has moved
+  # since the last successful packaging run. Pushes and manual dispatches always publish.
+  check-changes:
+    if: github.repository == 'meshtastic/standalone-ui'
+    runs-on: ubuntu-26.04
+    permissions:
+      actions: read
+    outputs:
+      changed: ${{ steps.check.outputs.changed }}
+    steps:
+      - name: Compare HEAD with last successful packaging run
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          if [[ "$EVENT_NAME" != "schedule" ]]; then
+            echo "Triggered by '$EVENT_NAME', packaging unconditionally"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          last_sha=$(gh run list \
+            --workflow daily_packaging.yml \
+            --branch "$BRANCH" \
+            --status success \
+            --limit 1 \
+            --json headSha \
+            --jq '.[0].headSha // ""')
+          echo "Last successful run: ${last_sha:-none}, current: $GITHUB_SHA"
+          if [[ "$last_sha" == "$GITHUB_SHA" ]]; then
+            echo "No changes since last successful packaging run, skipping"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  package-ppa:
+    needs: check-changes
+    if: needs.check-changes.outputs.changed == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        series:
+          - jammy # 22.04 LTS
+          - noble # 24.04 LTS
+          - resolute # 26.04 LTS
+          - stonking # 26.10
+    uses: ./.github/workflows/package_ppa.yml
+    with:
+      ppa_repo: ppa:meshtastic/mui
+      series: ${{ matrix.series }}
+    secrets: inherit
+
+  package-obs:
+    needs: check-changes
+    if: needs.check-changes.outputs.changed == 'true'
+    uses: ./.github/workflows/package_obs.yml
+    with:
+      obs_project: network:Meshtastic:MUI
+      series: unstable
+    secrets: inherit
