@@ -50,7 +50,7 @@ class DummyClient : public IClientBase
         return dummy;
     }
     void setNotifyCallback(NotifyCallback notifyConnectionStatus) override {}
-    ~DummyClient() {};
+    ~DummyClient(){};
 };
 #endif
 
@@ -149,28 +149,27 @@ void portduinoSetup(void)
     constexpr auto device = DisplayDriverConfig::device_t::X11;
 #endif
 
-    native_ui::OptionValues environment;
     const auto readEnvironment = [](const char *name) -> std::optional<std::string> {
         const char *value = getenv(name);
         return value && *value ? std::optional<std::string>(value) : std::nullopt;
     };
-    environment.size = readEnvironment("MUI_SIZE");
-    environment.keyboard = readEnvironment("MUI_KEYBOARD");
-    environment.pointer = readEnvironment("MUI_POINTER");
-    environment.keyboardNavigation = readEnvironment("MUI_KEYBOARD_NAVIGATION");
-    environment.cursor = readEnvironment("MUI_CURSOR");
-    environment.sidebarScrollbar = readEnvironment("MUI_SIDEBAR_SCROLLBAR");
+
+    native_ui::OptionValues environment = {.size = readEnvironment("MUI_SIZE"),
+                                           .keyboard = readEnvironment("MUI_KEYBOARD"),
+                                           .pointer = readEnvironment("MUI_POINTER"),
+                                           .keyboardNavigation = readEnvironment("MUI_KEYBOARD_NAVIGATION"),
+                                           .cursor = readEnvironment("MUI_CURSOR"),
+                                           .sidebarScrollbar = readEnvironment("MUI_SIDEBAR_SCROLLBAR")};
     native_ui::DisplayOptions options;
     std::string error;
     if (!native_ui::resolveDisplayOptions(displayOptions, environment, framebuffer, options, error)) {
         fprintf(stderr, "Invalid native display option: %s\n", error.c_str());
         exit(EXIT_FAILURE);
     }
-
-    DisplayDriverConfig config(device, options.width, options.height);
-    config.input(std::move(options.input));
-    config.navigation(std::move(options.navigation));
-    screen = &DeviceScreen::create(std::move(config));
+    DisplayDriverConfig config{device, options.width, options.height};
+    config.input(DisplayDriverConfig::input_config_t{options.input})
+        .navigation(DisplayDriverConfig::navigation_config_t{options.navigation});
+    screen = &DeviceScreen::create(DisplayDriverConfig{config});
 }
 #endif
 
